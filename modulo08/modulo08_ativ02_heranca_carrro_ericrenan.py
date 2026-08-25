@@ -12,7 +12,7 @@ class CarroEletrico(Carro):
         self.autonomia_bateria = autonomia_bateria
 
     def exibir_info(self):
-        info_base = super().exibir_info()
+        info_base = super().exibir_info() 
         return f"{info_base}, Autonomia da Bateria: {self.autonomia_bateria} km"
     
 meu_Carro = CarroEletrico("BYD","Dolphin",600) 
