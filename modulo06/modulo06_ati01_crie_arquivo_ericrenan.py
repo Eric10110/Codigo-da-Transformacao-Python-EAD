@@ -31,4 +31,3 @@ print("\n--- Lendo o conteúdo do arquivo TXT ---")
 with open(nome_arquivo, "r", encoding="utf-8") as arquivo:
     texto = arquivo.read()
     print(texto)
-    

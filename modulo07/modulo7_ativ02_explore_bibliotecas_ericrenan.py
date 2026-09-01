@@ -1,13 +1,12 @@
-
 import datetime
 import os
 import random
 from faker import Faker
 
-# Inicializa o Faker configurado para Português do Brasil
+# Inicializa o Faker configurado para Português do Brasil.is 
 fake = Faker("pt_BR")
 
-# Códigos de cores ANSI para o terminal
+# Códigos de cores ANSI para mudar a cor do terminal.
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RED = "\033[91m"
@@ -29,7 +28,7 @@ def definir_situacao(media):
 
 
 def gerar_dados_pessoais():
-    
+
     perfil = fake.profile()
     return {
         "nome": perfil["name"],
@@ -188,4 +187,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

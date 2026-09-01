@@ -1,22 +1,18 @@
 '''
-
-
-
 '''
-
 import random
 import math
 
 def jogar():
     limite_inferior = 1
     limite_superior = 24
-    
-    # Gerando número secreto aleatório
+
+    # Gerando número secreto de forma aleatório
     numero_secreto = random.randint(limite_inferior, limite_superior)
-    
+
     # Calculando o número máximo de tentativas com fórmula matemática (log2)
     max_tentativas = math.ceil(math.log2(limite_superior - limite_inferior + 1))
-    
+
     print("=== JOGO DA ADIVINHAÇÃO ===")
     print(f"Tente adivinhar o número entre {limite_inferior} e {limite_superior}.")
     print(f"Você tem {max_tentativas} tentativas!\n")
