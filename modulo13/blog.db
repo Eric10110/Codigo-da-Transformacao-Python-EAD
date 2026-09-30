@@ -1,0 +1,11 @@
+SQLite format 3@  .� � �        �� ���mtablepostspostsCREATE TABLE posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo TEXT NOT NULL,
+            conteudo TEXT NOT NULL,
+            autor_id INTEGER,
+            FOREIGN KEY (autor_id) REFERENCES usuarios (id)
+        )P++Ytablesqlite_sequencesqlite_sequenceCREATE TABLE sqlite_sequence(name,seq)�;�ItableusuariosusuariosCREATE TABLE usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            senha TEXT NOT NULL
+        )/Cindexsqlite_autoindex_usuarios_1usuarios 

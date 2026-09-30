@@ -1,0 +1,5 @@
+SQLite format 3@  .� �@�P++Ytablesqlite_sequencesqlite_sequenceCREATE TABLE sqlite_sequence(name,seq)�=�QtableTarefasTarefasCREATE TABLE Tarefas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao TEXT NOT NULL,
+            status TEXT DEFAULT 'Pendente'
+        ) 

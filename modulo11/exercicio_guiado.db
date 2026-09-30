@@ -1,0 +1,5 @@
+SQLite format 3@  .� �M�P++Ytablesqlite_sequencesqlite_sequenceCREATE TABLE sqlite_sequence(name,seq)�0�3tableClientesClientesCREATE TABLE Clientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL
+        ) ����f''9Andreia Silvaandreia.silva@mail.com##5Diane Silvadiane.silva@mail.com));Patricia Silvapatypaty.silva@mail.com1Ana Silvaana.silva@mail.com ��Clientes
