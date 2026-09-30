@@ -1,0 +1,533 @@
+"""
+===============================================================================
+IA "SKY" - Versão Automação Total (Controle Local + Navegação Web + Google Calendar)
+Agora com DOIS MODOS: 💬 CHAT BOT  e  🤖 ASSISTENTE
+===============================================================================
+"""
+
+import hashlib
+import json
+import os
+import re
+import sqlite3
+import sys
+import subprocess
+import threading
+import traceback
+import urllib.parse
+import webbrowser
+from datetime import datetime
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext, filedialog
+
+print("[INFO] Iniciando verificação de dependências...")
+
+# 1. Verificação do Ollama
+try:
+    import ollama
+except ImportError:
+    print("[ERRO] Biblioteca 'ollama' não instalada. Execute: pip install ollama")
+    sys.exit(1)
+
+# 2. Verificação das bibliotecas do Google Calendar API
+try:
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+except ImportError:
+    print("[ERRO] Dependências do Google ausentes. Execute: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib")
+    sys.exit(1)
+
+# 3. Automação Visual (Opcional)
+try:
+    import pyautogui
+    PYAUTOGUI_DISPONIVEL = True
+except ImportError:
+    PYAUTOGUI_DISPONIVEL = False
+
+
+MODELO_AVANCADO_OLLAMA = "llama3.1:8b"
+NOME_BANCO_DADOS = "historico_sky.db"
+ARQUIVO_CONFIG_JSON = "config.json"
+LIMITE_MENSAGENS_RECENTES = 4
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+
+# Perfil administrativo local: qualquer conta com este nome ganha acesso ao botão
+# de exportação do banco de dados na interface. A senha em si (definida no login
+# normal, como qualquer outra conta) deve ser 'Root'. Isso não é uma trava de
+# segurança real - é só um atalho de conveniência para um app local de um usuário só.
+NOME_USUARIO_ROOT = "Root Master"
+
+# Limite de segurança do loop de ferramentas do modo Assistente
+MAX_TOOL_ITERATIONS = 5
+
+# Callback thread-safe de confirmação, definido pela GUI (AppSky) na inicialização.
+# Assinatura esperada: (titulo: str, mensagem: str) -> bool
+CONFIRMACAO_CALLBACK = None
+
+# Padrões (case-insensitive) que identificam comandos de terminal potencialmente
+# destrutivos e que, portanto, exigem confirmação explícita do usuário antes de rodar.
+PADROES_COMANDO_DESTRUTIVO = [
+    r"\bdel\b", r"\berase\b", r"\brd\b", r"\brmdir\b", r"\brm\s+-rf\b", r"\brm\s+-r\b",
+    r"\bformat\b", r"\bdiskpart\b", r"\bshutdown\b", r"\breboot\b",
+    r"\breg\s+delete\b", r"\bnet\s+user\b", r"\btaskkill\b", r"\bdrop\s+table\b",
+    r"\bmkfs\b", r"\bchmod\s+-r\b", r"\bdd\s+if=", r"\buninstall\b", r"\bmsiexec\b.*\/x",
+]
+
+
+# =============================================================================
+# MÓDULO DE AUTOMAÇÃO LOCAL E NAVEGAÇÃO WEB
+# =============================================================================
+
+# Catálogo configurável de aplicativos locais conhecidos (Windows).
+CATALOGO_APLICATIVOS = {
+    "bloco de notas": "notepad.exe",
+    "notepad": "notepad.exe",
+    "calculadora": "calc.exe",
+    "edge": "msedge.exe",
+    "cmd": "cmd.exe",
+    "terminal": "wt.exe",
+    "paint": "mspaint.exe",
+    "vscode": "code",
+    "vs code": "code",
+    "code": "code",
+    "spotify": "spotify.exe",
+    "explorador": "explorer.exe",
+    "explorer": "explorer.exe",
+}
+
+# Canais conhecidos do YouTube. NUNCA inventar URLs de canais que não estejam aqui:
+# se o canal não estiver mapeado, cai para a busca normal do YouTube.
+CANAIS_YOUTUBE_CONHECIDOS = {
+    "edukof": "https://www.youtube.com/@edukof",
+    "amenic": "https://www.youtube.com/@edukof",
+}
+
+
+def _texto_parece_url(texto: str) -> bool:
+    """Heurística simples para saber se uma string já parece uma URL/domínio."""
+    texto = texto.strip()
+    if not texto:
+        return False
+    if texto.startswith("http://") or texto.startswith("https://"):
+        return True
+    # algo do tipo "exemplo.com" ou "exemplo.com/pagina"
+    return bool(re.match(r"^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+(/\S*)?$", texto))
+
+
+def abrir_site(url: str) -> str:
+    """Abre uma URL/site no navegador padrão, normalizando o esquema (https://) quando necessário.
+
+    Args:
+        url: endereço do site a abrir, com ou sem "https://".
+    """
+    if not url or not url.strip():
+        return "Nenhuma URL foi fornecida."
+
+    alvo = url.strip()
+    if not alvo.startswith("http://") and not alvo.startswith("https://"):
+        alvo = f"https://{alvo}"
+
+    if not _texto_parece_url(url.strip()):
+        return f"'{url}' não parece ser uma URL válida."
+
+    try:
+        webbrowser.open(alvo)
+        return f"Site '{alvo}' aberto no navegador."
+    except Exception as e:
+        return f"Falha ao abrir o site '{url}': {str(e)}"
+
+
+def pesquisar_google(termo: str) -> str:
+    """Pesquisa um termo no Google, abrindo o resultado no navegador padrão.
+
+    Args:
+        termo: o que deve ser pesquisado no Google.
+    """
+    if not termo or not termo.strip():
+        return "Nenhum termo de pesquisa foi fornecido."
+    termo_encoded = urllib.parse.quote(termo.strip())
+    try:
+        webbrowser.open(f"https://www.google.com/search?q={termo_encoded}")
+        return f"Pesquisando '{termo}' no Google!"
+    except Exception as e:
+        return f"Falha ao pesquisar '{termo}' no Google: {str(e)}"
+
+
+def abrir_youtube(alvo: str = "") -> str:
+    """Abre o YouTube: sem alvo abre a home, com um canal conhecido abre o canal,
+    e com um termo de busca pesquisa vídeos.
+
+    Args:
+        alvo: pode ser vazio (abrir YouTube), o nome de um canal conhecido
+              (ex: 'edukof') ou um termo de busca (ex: 'músicas de Hollow Knight').
+    """
+    alvo_limpo = (alvo or "").lower().strip()
+
+    if not alvo_limpo:
+        webbrowser.open("https://www.youtube.com")
+        return "YouTube aberto com sucesso no navegador!"
+
+    # 1. Canal conhecido (mapeamento explícito, nunca inventado)
+    for chave, link in CANAIS_YOUTUBE_CONHECIDOS.items():
+        if chave in alvo_limpo:
+            webbrowser.open(link)
+            return f"Canal '{chave}' aberto com sucesso no YouTube!"
+
+    # 2. Pedido explícito de canal não mapeado -> cai para busca de canais
+    termo_limpo = alvo_limpo
+    for palavra in ["canal do", "canal de", "canal", "pesquise", "pesquisar", "procure", "procurar",
+                     "abra", "abrir", "vídeos de", "videos de", "músicas de", "musicas de", "no youtube", "youtube"]:
+        termo_limpo = termo_limpo.replace(palavra, "")
+    termo_limpo = termo_limpo.strip(" :-")
+
+    if not termo_limpo:
+        webbrowser.open("https://www.youtube.com")
+        return "YouTube aberto com sucesso no navegador!"
+
+    termo_encoded = urllib.parse.quote(termo_limpo)
+    webbrowser.open(f"https://www.youtube.com/results?search_query={termo_encoded}")
+    return f"Pesquisando '{termo_limpo}' no YouTube!"
+
+
+def abrir_aplicativo(nome_app: str) -> str:
+    """Abre aplicativos locais conhecidos, ou cai para pesquisa no navegador se não reconhecer.
+
+    Para sites, Google e YouTube, prefira as ferramentas abrir_site, pesquisar_google
+    e abrir_youtube, que são mais específicas.
+
+    Args:
+        nome_app: nome do aplicativo a abrir (ex: 'bloco de notas', 'spotify', 'vscode').
+    """
+    nome_clean = nome_app.lower().strip()
+    sistema = sys.platform
+
+    # Redirecionamentos de conveniência para os casos mais comuns de web,
+    # mantendo compatibilidade com quem ainda chamar esta função para isso.
+    if "youtube" in nome_clean:
+        return abrir_youtube(nome_clean.replace("youtube", "").replace("abrir", "").strip())
+
+    if any(k in nome_clean for k in ["google", "chrome", "navegador", "internet"]):
+        if any(k in nome_clean for k in ["calendario", "calendar", "agenda"]):
+            webbrowser.open("https://calendar.google.com")
+            return "Google Calendário aberto no seu navegador."
+        termo_busca = nome_clean
+        for palavra in ["google", "chrome", "abra", "abrir", "pesquisar", "pesquise", "para mim", "no navegador"]:
+            termo_busca = termo_busca.replace(palavra, "")
+        termo_busca = termo_busca.strip()
+        if termo_busca:
+            return pesquisar_google(termo_busca)
+        webbrowser.open("https://www.google.com")
+        return "Navegador Google Chrome aberto com sucesso."
+
+    # Catálogo de aplicativos locais (correspondência exata ou por substring)
+    alvo_app = None
+    if nome_clean in CATALOGO_APLICATIVOS:
+        alvo_app = CATALOGO_APLICATIVOS[nome_clean]
+    else:
+        for chave, executavel in CATALOGO_APLICATIVOS.items():
+            if chave in nome_clean or nome_clean in chave:
+                alvo_app = executavel
+                break
+
+    user_profile = os.environ.get("USERPROFILE", "")
+    caminhos_chrome = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.join(user_profile, r"AppData\Local\Google\Chrome\Application\chrome.exe")
+    ]
+    chrome_encontrado = next((p for p in caminhos_chrome if os.path.exists(p)), None)
+
+    try:
+        if sistema.startswith("win"):
+            if alvo_app:
+                subprocess.Popen(alvo_app)
+                return f"Aplicativo '{nome_app}' aberto com sucesso."
+            elif chrome_encontrado and ("chrome" in nome_clean or "google" in nome_clean):
+                subprocess.Popen(chrome_encontrado)
+                return "Google Chrome aberto com sucesso."
+            elif _texto_parece_url(nome_clean):
+                return abrir_site(nome_clean)
+            else:
+                return pesquisar_google(nome_app)
+        elif sistema == "darwin":  # macOS
+            subprocess.Popen(["open", "-a", nome_app])
+            return f"Aplicativo '{nome_app}' aberto no macOS."
+        else:  # Linux
+            subprocess.Popen([nome_clean])
+            return f"Aplicativo '{nome_app}' iniciado no Linux."
+    except FileNotFoundError:
+        return f"Não encontrei o aplicativo '{nome_app}' instalado neste computador."
+    except Exception as e:
+        return f"Falha ao processar solicitação para '{nome_app}': {str(e)}"
+
+
+def _comando_e_destrutivo(comando: str) -> bool:
+    comando_lc = comando.lower()
+    return any(re.search(padrao, comando_lc) for padrao in PADROES_COMANDO_DESTRUTIVO)
+
+
+def executar_comando_terminal(comando: str) -> str:
+    """Executa um comando de terminal (CMD/Bash) e retorna o resultado.
+
+    Comandos potencialmente destrutivos (apagar arquivos, formatar, desligar o PC,
+    etc.) exigem confirmação explícita do usuário antes de serem executados.
+
+    Args:
+        comando: o comando de terminal a executar.
+    """
+    if not comando or not comando.strip():
+        return "Nenhum comando foi fornecido."
+
+    if _comando_e_destrutivo(comando):
+        if CONFIRMACAO_CALLBACK is None:
+            return (f"Comando '{comando}' parece potencialmente destrutivo e não foi executado "
+                     f"(nenhum canal de confirmação disponível).")
+        confirmado = CONFIRMACAO_CALLBACK(
+            "Confirmação necessária",
+            f"A SKY quer executar o seguinte comando potencialmente destrutivo:\n\n{comando}\n\nDeseja autorizar?",
+        )
+        if not confirmado:
+            return f"Comando '{comando}' cancelado: o usuário não autorizou a execução."
+
+    try:
+        resultado = subprocess.run(
+            comando, shell=True, capture_output=True, text=True, timeout=15
+        )
+        saida = resultado.stdout.strip() or resultado.stderr.strip()
+        return f"Resultado:\n{saida}" if saida else "Comando executado sem retorno textual."
+    except subprocess.TimeoutExpired:
+        return "O comando demorou demais e foi interrompido (timeout)."
+    except Exception as e:
+        return f"Erro ao executar comando: {str(e)}"
+
+
+def digitar_texto_tela(texto: str) -> str:
+    """Digita um texto simulando o teclado usando PyAutoGUI.
+
+    Args:
+        texto: o texto a ser digitado na posição atual do cursor.
+    """
+    if not PYAUTOGUI_DISPONIVEL:
+        return "PyAutoGUI não está instalado no sistema."
+    try:
+        pyautogui.write(texto, interval=0.03)
+        return f"Texto '{texto}' digitado na tela com sucesso."
+    except Exception as e:
+        return f"Erro ao digitar na tela: {str(e)}"
+
+
+def pressionar_tecla(tecla: str) -> str:
+    """Pressiona uma única tecla do teclado (ex: 'enter', 'esc', 'tab').
+
+    Args:
+        tecla: nome da tecla, no formato aceito pelo PyAutoGUI.
+    """
+    if not PYAUTOGUI_DISPONIVEL:
+        return "PyAutoGUI não está instalado no sistema."
+    try:
+        pyautogui.press(tecla)
+        return f"Tecla '{tecla}' pressionada com sucesso."
+    except Exception as e:
+        return f"Erro ao pressionar a tecla '{tecla}': {str(e)}"
+
+
+def pressionar_teclas(combinacao: str) -> str:
+    """Pressiona uma combinação de teclas, separadas por '+' (ex: 'ctrl+c', 'alt+tab').
+
+    Args:
+        combinacao: teclas separadas por '+'.
+    """
+    if not PYAUTOGUI_DISPONIVEL:
+        return "PyAutoGUI não está instalado no sistema."
+    try:
+        teclas = [t.strip() for t in combinacao.split("+") if t.strip()]
+        pyautogui.hotkey(*teclas)
+        return f"Combinação '{combinacao}' executada com sucesso."
+    except Exception as e:
+        return f"Erro ao executar a combinação '{combinacao}': {str(e)}"
+
+
+def mover_mouse(x: int, y: int) -> str:
+    """Move o cursor do mouse para uma posição específica da tela.
+
+    Args:
+        x: posição horizontal em pixels.
+        y: posição vertical em pixels.
+    """
+    if not PYAUTOGUI_DISPONIVEL:
+        return "PyAutoGUI não está instalado no sistema."
+    try:
+        pyautogui.moveTo(int(x), int(y), duration=0.2)
+        return f"Mouse movido para ({x}, {y})."
+    except Exception as e:
+        return f"Erro ao mover o mouse: {str(e)}"
+
+
+def clicar_tela(x: int = None, y: int = None) -> str:
+    """Clica na posição atual do mouse, ou em uma posição específica se informada.
+
+    Args:
+        x: posição horizontal em pixels (opcional).
+        y: posição vertical em pixels (opcional).
+    """
+    if not PYAUTOGUI_DISPONIVEL:
+        return "PyAutoGUI não está instalado no sistema."
+    try:
+        if x is not None and y is not None:
+            pyautogui.click(int(x), int(y))
+            return f"Clique realizado em ({x}, {y})."
+        pyautogui.click()
+        return "Clique realizado na posição atual do mouse."
+    except Exception as e:
+        return f"Erro ao clicar na tela: {str(e)}"
+
+
+# =============================================================================
+# MÓDULO GOOGLE CALENDAR (API)
+# =============================================================================
+
+def obter_servico_google_calendar():
+    """Autentica o usuário via OAuth2 e retorna o serviço da API do Calendar."""
+    creds = None
+    if os.path.exists('token.json'):
+        try:
+            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        except Exception as e:
+            print(f"[AVISO] token.json inválido: {e}")
+            creds = None
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"[AVISO] Falha ao renovar token: {e}")
+                creds = None
+
+        if not creds:
+            if not os.path.exists('credentials.json'):
+                return None, "O arquivo 'credentials.json' não foi encontrado na pasta do script."
+
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                creds = flow.run_local_server(port=0, prompt='consent')
+            except Exception as err_auth:
+                return None, f"Falha na autenticação OAuth: {str(err_auth)}"
+
+        try:
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+        except Exception as err_token:
+            print(f"[AVISO] Não foi possível salvar token.json: {err_token}")
+
+    try:
+        service = build('calendar', 'v3', credentials=creds)
+        return service, "Sucesso"
+    except Exception as err_service:
+        return None, f"Erro ao conectar com serviço Google Calendar: {str(err_service)}"
+
+
+def agendar_compromisso_google(titulo: str, data_inicio_iso: str, duracao_minutos: int = 60) -> str:
+    """Cria um evento no Google Calendar via API.
+
+    Args:
+        titulo: título do evento.
+        data_inicio_iso: data/hora de início no formato 'YYYY-MM-DDTHH:MM:SS'.
+        duracao_minutos: duração do evento em minutos (padrão 60).
+    """
+    try:
+        service, msg = obter_servico_google_calendar()
+        if not service:
+            return f"Erro de autenticação no Google Calendar: {msg}"
+
+        from datetime import datetime, timedelta
+
+        data_clean = data_inicio_iso.strip()
+        if " " in data_clean and "T" not in data_clean:
+            data_clean = data_clean.replace(" ", "T")
+        if data_clean.endswith("Z"):
+            data_clean = data_clean[:-1]
+        if "+" in data_clean:
+            data_clean = data_clean.split("+")[0]
+
+        try:
+            inicio_dt = datetime.fromisoformat(data_clean)
+        except ValueError:
+            inicio_dt = datetime.strptime(data_clean[:19], "%Y-%m-%dT%H:%M:%S")
+
+        fim_dt = inicio_dt + timedelta(minutes=duracao_minutos)
+
+        evento = {
+            'summary': titulo,
+            'start': {
+                'dateTime': inicio_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                'timeZone': 'America/Sao_Paulo',
+            },
+            'end': {
+                'dateTime': fim_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                'timeZone': 'America/Sao_Paulo',
+            },
+        }
+
+        evento_criado = service.events().insert(calendarId='primary', body=evento).execute()
+        link = evento_criado.get('htmlLink', '')
+        return f"Evento '{titulo}' agendado para {inicio_dt.strftime('%d/%m/%Y às %H:%M')}! Link: {link}"
+
+    except Exception as e:
+        return f"Erro ao criar evento no Google Calendar: {str(e)}"
+
+
+# =============================================================================
+# DESPACHO DE FERRAMENTAS (usado pelo loop de agente do modo Assistente)
+# =============================================================================
+
+MAPA_FERRAMENTAS = {
+    "abrir_aplicativo": abrir_aplicativo,
+    "abrir_site": abrir_site,
+    "pesquisar_google": pesquisar_google,
+    "abrir_youtube": abrir_youtube,
+    "executar_comando_terminal": executar_comando_terminal,
+    "digitar_texto_tela": digitar_texto_tela,
+    "pressionar_tecla": pressionar_tecla,
+    "pressionar_teclas": pressionar_teclas,
+    "mover_mouse": mover_mouse,
+    "clicar_tela": clicar_tela,
+    "agendar_compromisso_google": agendar_compromisso_google,
+}
+
+FERRAMENTAS_ASSISTENTE = [
+    abrir_aplicativo,
+    abrir_site,
+    pesquisar_google,
+    abrir_youtube,
+    executar_comando_terminal,
+    digitar_texto_tela,
+    pressionar_tecla,
+    mover_mouse,
+    clicar_tela,
+    agendar_compromisso_google,
+]
+
+
+def executar_ferramenta_por_nome(nome: str, argumentos: dict) -> str:
+    """Executa, de forma segura, a ferramenta 'nome' com os argumentos fornecidos pelo modelo."""
+    funcao = MAPA_FERRAMENTAS.get(nome)
+    if not funcao:
+        return f"Ferramenta '{nome}' desconhecida."
+    try:
+        argumentos = dict(argumentos or {})
+        return funcao(**argumentos)
+    except TypeError as e:
+        return f"Argumentos inválidos para '{nome}': {str(e)}"
+    except Exception as e:
+        return f"Erro ao executar '{nome}': {str(e)}"
+
+
+# =============================================================================
+# BANCO DE DADOS & CONFIGURAÇÃO
+# =============================================================================
+
+def obter_conexao_db():
+    return sqlite3.connect(NOME_BANCO_DADOS, ti
