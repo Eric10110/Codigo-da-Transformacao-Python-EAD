@@ -1,0 +1,28 @@
+� 
+j��j.��n�SSKrSSKJs Jr SSKrSSKJr \RS5r        Sr
+SrSrSr g)�N)�appc#�# �S[RS'[R"5nUv� SSS5 g!,(df   g=f7f)u<Simula o envio de requisições HTTP para a nossa API Flask.T�TESTINGN)r�config�test_client)�clients �\C:\Users\NotePCoder\Documents\GitHub\Codigo-da-Transformacao-Python-EAD\modulo12\test_app.pyrrs1���!�C�J�J�y��        ���        �f���
+�        �        �s�)A
+�9�        A
+�
+A�A
+c��URSSSS.S9nUR5nURnSoCU:HoU(d�[R"SU4SX445S        [
+R"5;d[R"U5(a[R"U5OS        [R"U5[R"U5S
+.-nSSU0-n[[R"U55eS=n=pTUS nSoXU:Ho�(do[R"SU        4SX�45[R"U5[R"U5S.-n
+SSU
+0-n[[R"U55eS=n=p�g)N�/somar�
+���a�b��json����==�z3%(py2)s
+{%(py2)s = %(py0)s.status_code
+} == %(py5)s�resposta��py0�py2�py5�assert %(py7)s�py7�        resultado��z%(py1)s == %(py4)s��py1�py4�assert %(py6)s�py6��post�get_json�status_code�
+@pytest_ar�_call_reprcompare�@py_builtins�locals�_should_repr_global_name�        _saferepr�AssertionError�_format_explanation�rr�dados�@py_assert1�@py_assert4�@py_assert3�@py_format6�@py_format8�@py_assert0�@py_assert2�@py_format5�@py_format7s            r        �test_rota_somar_sucessor=s����{�{�8���*<�{�=�H�����E����&�3�&�3�&�&�&�&�&��&�&�&�&�&�&�8�&�&�&�&�8�&�&�&��&�&�&�3�&�&�&�&�&�&�&����#��#��#�#�#�#�#��#�#�#��#�#�#��#�#�#�#�#�#�#�c��URSSSS.S9nUR5nURnSoCU:HoU(d�[R"SU4SX445S        [
+R"5;d[R"U5(a[R"U5OS        [R"U5[R"U5S
+.-nSSU0-n[[R"U55eS=n=pTUS nSoXU:Ho�(do[R"SU        4SX�45[R"U5[R"U5S.-n
+SSU
+0-n[[R"U55eS=n=p�g)N�/dividirr�rrrrrrrrrr�r r!r$r%r&r2s            r        �test_rota_dividir_sucessorCs����{�{�:�"�1�,=�{�>�H�����E����&�3�&�3�&�&�&�&�&��&�&�&�&�&�&�8�&�&�&�&�8�&�&�&��&�&�&�3�&�&�&�&�&�&�&����"��"��"�"�"�"�"��"�"�"��"�"�"��"�"�"�"�"�"�"r>c��URSSSS.S9nUR5nURnSoCU:HoU(d�[R"SU4SX445S        [
+R"5;d[R"U5(a[R"U5OS        [R"U5[R"U5S
+.-nSSU0-n[[R"U55eS=n=pTUS nSoXU:Ho�(do[R"SU        4SX�45[R"U5[R"U5S.-n
+SSU
+0-n[[R"U55eS=n=p�g)Nr@rrrr�rrrrrr�errou$Divisão por zero não é permitida.r r!r$r%r&r2s            r        �test_rota_dividir_por_zerorGs����{�{�:�"�1�,=�{�>�H�����E����&�3�&�3�&�&�&�&�&��&�&�&�&�&�&�8�&�&�&�&�8�&�&�&��&�&�&�3�&�&�&�&�&�&�&���=�B�B�B�B�B�B�B�B�B�=�B�B�B�=�B�B�B�B�B�B�B�B�B�B�Br>c��URSSSS.S9nUR5nURnSoCU:HoU(d�[R"SU4SX445S        [
+R"5;d[R"U5(a[R"U5OS        [R"U5[R"U5S
+.-nSSU0-n[[R"U55eS=n=pTUS nSoXU:Ho�(do[R"SU        4SX�45[R"U5[R"U5S.-n
+SSU
+0-n[[R"U55eS=n=p�g)Nr�dezrBrrrErrrrrrrFu'Os valores devem ser números válidos.r r!r$r%r&r2s            r        �test_entrada_invalidarJ!s����{�{�8��A�*>�{�?�H�����E����&�3�&�3�&�&�&�&�&��&�&�&�&�&�&�8�&�&�&�&�8�&�&�&��&�&�&�3�&�&�&�&�&�&�&���=�E�E�E�E�E�E�E�E�E�=�E�E�E�=�E�E�E�E�E�E�E�E�E�E�Er>)�builtinsr,�_pytest.assertion.rewrite�        assertion�rewriter*�pytestr�fixturerr=rCrGrJ�r>r        �<module>rRs;���� ��������$�#�C�Fr>

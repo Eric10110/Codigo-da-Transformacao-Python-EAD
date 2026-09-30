@@ -1,0 +1,9 @@
+� 
+���jn���SSKrSSKJs Jr SSKrSSKJr "SS\R5r        \
+S:Xa\R"5 gg)�N)�appc�2�\rSrSrSrSrSrSrSrSr        g)        � TesteAPIFlask�c�^�S[RS'[R"5Ulg)z;Configura o cliente de testes do Flask antes de cada teste.T�TESTINGN)r�config�test_client�client)�selfs �iC:\Users\NotePCoder\Documents\GitHub\Codigo-da-Transformacao-Python-EAD\modulo12\test_app_teste-direto.py�setUp�TesteAPIFlask.setUps�� $��
+�
+�9���o�o�'���c���URRSSSS.S9nUR5nURURS5 URUSS5 g)        N�/somar�
+���a�b��json���        resultado��r�post�get_json�assertEqual�status_code�r�resposta�dadoss   r �test_rota_somar_sucesso�%TesteAPIFlask.test_rota_somar_sucessosY���;�;�#�#�H��"�3E�#�F���!�!�#������-�-�s�3�����{�+�R�0rc���URRSSSS.S9nUR5nURURS5 URUSS5 g)        N�/dividirr�rrrr�rr"s   r �test_rota_dividir_sucesso�'TesteAPIFlask.test_rota_dividir_sucessosY���;�;�#�#�J�2�A�5F�#�G���!�!�#������-�-�s�3�����{�+�Q�/rc���URRSSSS.S9nUR5nURURS5 URUSS5 g)        Nr(rrrr��errou$Divisão por zero não é permitida.rr"s   r �test_rota_dividir_por_zero�(TesteAPIFlask.test_rota_dividir_por_zerosY���;�;�#�#�J�2�A�5F�#�G���!�!�#������-�-�s�3�����v��(N�Orc���URRSSSS.S9nUR5nURURS5 URUSS5 g)        Nr�dezr*rrr.r/u'Os valores devem ser números válidos.rr"s   r �test_entrada_invalida�#TesteAPIFlask.test_entrada_invalida$sY���;�;�#�#�H��Q�3G�#�H���!�!�#������-�-�s�3�����v��(Q�Rr)rN)
+�__name__�
+__module__�__qualname__�__firstlineno__rr%r+r0r4�__static_attributes__�rr rrs��(�1�0�P�Srr�__main__)�builtins�@py_builtins�_pytest.assertion.rewrite�        assertion�rewrite�
+@pytest_ar�unittestr�TestCaserr6�mainr;rr �<module>rFs<������%S�H�%�%�%S�N�z���M�M�O�r

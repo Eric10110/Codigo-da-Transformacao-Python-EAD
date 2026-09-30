@@ -1,0 +1,10 @@
+� 
+Z��j����SSKJrJrJr \"\5r\R SS/S9S5r\R SS/S9S5r\S:Xa\RS        S
+9 gg)�)�Flask�jsonify�requestz/somar�POST)�methodsc��[R"5nU(aSU;dSU;a[SS05S4$[US5n[US5n[SX-05S4$![[
+4a [SS05S4s$f=f)        N�a�b�erro�)Parâmetros 'a' e 'b' são obrigatórios.��'Os valores devem ser números válidos.�        resultado���r�get_jsonr�float�
+ValueError�        TypeError��dadosr        r
+s   �WC:\Users\NotePCoder\Documents\GitHub\Codigo-da-Transformacao-Python-EAD\modulo12\app.py�somarrs�������E��C�u�$��5�(8��� K�L�M�s�R�R�Q��%��*����%��*����K���'�(�#�-�-�� �        �"�Q��� I�J�K�S�P�P�Q�s�A&�&B�Bz/dividirc�@�[R"5nU(aSU;dSU;a[SS05S4$[US5n[US5nUS:Xa[SS05S4$[S        X-05S
+4$![[
+4a [SS05S4s$f=f)Nr        r
+rrr rru$Divisão por zero não é permitida.rrrrs   r�dividirrs�������E��C�u�$��5�(8��� K�L�M�s�R�R�Q��%��*����%��*���        �A�v��� F�G�H�#�M�M��K���'�(�#�-�-�� �        �"�Q��� I�J�K�S�P�P�Q�s�A;�;B�B�__main__T)�debugN)
+�flaskrrr�__name__�app�routerr�run��r�<module>r%sw��)�)��H�o�����8�f�X��&�.�'�.����:��x��(�.�)�.� �z���G�G�$�G��r$
